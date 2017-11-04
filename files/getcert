@@ -1,0 +1,43 @@
+#!/bin/bash
+
+set -o xtrace
+set -o nounset
+
+_INTERMEDIATE_PATH="/var/lib/acme/letsencrypt.intermediate.pem"
+
+account_key="$1"
+shift
+
+domain_key="$1"
+shift
+
+csr="$1"
+shift
+
+cert="$1"
+shift
+
+webroot="$1"
+shift
+
+domain="$1"
+shift
+
+mkdir -p "$webroot/$domain"
+
+aliases=""
+for i in "${@}" ; do
+    aliases="${aliases},DNS:${i}"
+    ln -s -r -f --no-target-directory "$webroot/$domain" "$webroot/$i"
+    shift
+done
+
+openssl req -new -sha256 -key "$domain_key" -subj "/" -reqexts SAN -config <(cat /etc/pki/tls/openssl.cnf <(printf "[SAN]\nsubjectAltName=DNS:${domain}${aliases}")) > "$csr"
+
+wget --timestamping https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem -O "$_INTERMEDIATE_PATH" || exit 1
+
+tmpcert="$(mktemp)"
+
+acme-tiny --account-key "$account_key" --csr $csr --acme-dir "$webroot/$domain" > "$tmpcert" || exit 1
+
+cat "$tmpcert" "$_INTERMEDIATE_PATH" > "$cert"

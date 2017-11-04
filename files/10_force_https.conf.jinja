@@ -1,0 +1,17 @@
+{% from 'states/nginx/map.jinja' import nginx as nginx_map with context %}
+{% from 'states/acme/map.jinja' import acme as acme_map with context %}
+server {
+    server_name _;
+    listen {{ nginx_map.ports.http }} default_server;
+{% if ipv6 %}
+    listen [::]:{{ nginx_map.ports.http }} default_server;
+{% endif %}
+    location / {
+        return 301 https://$host$request_uri;
+    }
+    location /.well-known/acme-challenge/ {
+        add_header Content-Type text/plain;
+        alias {{ acme_map.webroot }}/$host/;
+        try_files $uri =404;
+    }
+}

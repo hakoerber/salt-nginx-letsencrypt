@@ -1,0 +1,52 @@
+{% set nginx = salt['grains.filter_by']({
+    'default': {
+        'package': 'nginx',
+        'service': 'nginx',
+        'user': 'nginx',
+        'group': 'nginx',
+        'ports': {
+            'http': '80',
+            'https': '443',
+        },
+        'conf': {
+            'confdir': '/etc/nginx',
+            'main': {
+                'path': '/etc/nginx/nginx.conf',
+                'template': 'salt://states/nginx/files/nginx.conf.jinja',
+            },
+            'include_dir': '/etc/nginx/conf.d',
+            'mime_types': '/etc/nginx/mime.types',
+        },
+        'logging': {
+            'files': [{
+                'path': '/var/log/nginx/access.log',
+                'tag': 'access'
+            },
+            {
+                'path': '/var/log/nginx/error.log',
+                'tag': 'error'
+            }],
+            'postrotate': [
+                '/bin/kill -USR1 $(cat /run/nginx.pid 2>/dev/null) 2>/dev/null || true',
+            ],
+            'permissions': {
+                'user': 'nginx',
+                'group': 'nginx',
+                'mode': '0644',
+            },
+        },
+        'pki': {
+            'pkidir': 'pki',
+            'cert': 'fullchain.pem',
+            'key': 'privkey.pem',
+            'dhparams': 'dhparams.pem',
+            'dh_bits': 2048,
+        },
+        'acme': {
+            'package': 'acme-tiny',
+            'user': 'acme',
+            'home': '/var/lib/acme',
+            'webroot': '/srv/acme/',
+        },
+    },
+}, base='default') %}

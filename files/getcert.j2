@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cd "$(dirname "$0")"
+./getcert ./account.key {{ domain.name }}/domain.key {{ domain.name }}/domain.csr {{ domain.name }}/domain.crt /srv/acme/ {{ domain.name }} {{ domain.aliases|join(' ') }}
+
+sudo /usr/local/bin/reload-nginx

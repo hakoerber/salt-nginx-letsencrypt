@@ -1,0 +1,35 @@
+{% from 'states/nginx/map.jinja' import nginx as nginx_map with context %}
+{% from 'states/acme/map.jinja' import acme as acme_map with context %}
+
+{% macro vhostopts(vhost) %}
+{% if 'http' in vhost.protocols %}
+    listen {{ nginx_map.ports.http }};
+{% if vhost.ipv6 %}
+    listen [::]:{{ nginx_map.ports.http }};
+{% endif %}
+{% endif %}
+{% if 'https' in vhost.protocols %}
+    listen {{ nginx_map.ports.https }} ssl;
+
+    ssl_certificate     {{ acme_map.home }}/{{ vhost.name }}/domain.crt;
+    ssl_certificate_key {{ acme_map.home }}/{{ vhost.name }}/domain.key;
+{% if vhost.ipv6 %}
+    listen [::]:{{ nginx_map.ports.https }};
+{% endif %}
+{% endif %}
+{% endmacro %}
+
+server {
+    {{ vhostopts(vhost) }}
+
+    server_name {{ vhost.name }};
+    root {{ vhost.path }};
+}
+
+{% if vhost.aliases is defined %}
+server {
+    {{ vhostopts(vhost) }}
+    server_name {{ vhost.aliases|join(' ') }};
+    return 301 $scheme://{{ vhost.name }}$request_uri;
+}
+{% endif %}
